@@ -5,9 +5,8 @@ import {
   KeyContext,
   XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
-import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
 import { Dhkem, type DhkemPrimitives, type KdfInterface } from "@hpke/common";
-import { CipherSuite, HkdfSha256, HkdfSha512, KemId } from "@hpke/core";
+import { HkdfSha256, KemId } from "@hpke/core";
 import { ed25519 } from "@noble/curves/ed25519.js";
 
 export type PublicXHDKey = CryptoKey & {
@@ -166,48 +165,3 @@ export class DhkemPeikertXhdHkdfSha256 extends Dhkem {
     super(1337 as KemId, new xHdECDH(kdf), kdf);
   }
 }
-
-async function main() {
-  const xhd = new XHDWalletAPI();
-
-  const suite = new CipherSuite({
-    kem: new DhkemPeikertXhdHkdfSha256(),
-    kdf: new HkdfSha512(),
-    aead: new Chacha20Poly1305(),
-  });
-
-  const receiverSeed = new Uint8Array(32);
-  crypto.getRandomValues(receiverSeed);
-  const receiverRoot = fromSeed(receiverSeed);
-  const receiverEd25519 = await xhd.keyGen(
-    receiverRoot,
-    KeyContext.Address,
-    0,
-    0,
-    BIP32DerivationType.Peikert,
-  );
-
-  // A sender encrypts a message with the recipient public key.
-  const sender = await suite.createSenderContext({
-    recipientPublicKey: await suite.kem.deserializePublicKey(receiverEd25519),
-  });
-  const ct = await sender.seal(new TextEncoder().encode("Hello world!").buffer);
-
-  // The recipient decrypts it.
-  const recipient = await suite.createRecipientContext({
-    recipientKey: {
-      rootKey: receiverRoot,
-      account: 0,
-      index: 0,
-    } as PrivateXHDKey,
-    enc: sender.enc,
-  });
-  const pt = await recipient.open(ct);
-
-  // Hello world!
-  console.log(new TextDecoder().decode(pt));
-}
-
-main().catch((e) => {
-  throw e;
-});
