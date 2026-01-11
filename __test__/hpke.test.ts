@@ -6,7 +6,12 @@ import {
 } from "@algorandfoundation/xhd-wallet-api";
 import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
 import { CipherSuite, HkdfSha512 } from "@hpke/core";
-import { DhkemPeikertXhdHkdfSha256, type PrivateXHDKey } from "../src";
+import {
+  decryptWithXhdHpke,
+  DhkemPeikertXhdHkdfSha256,
+  encryptWithXhdHpke,
+  type PrivateXHDKey,
+} from "../src";
 import { describe, expect, it } from "vitest";
 
 describe("xHD HPKE", () => {
@@ -51,5 +56,35 @@ describe("xHD HPKE", () => {
 
     // Hello world!
     expect(new TextDecoder().decode(pt)).toBe("Hello world!");
+  });
+
+  it("encrypt/decrypt functions", async () => {
+    const xhd = new XHDWalletAPI();
+
+    const receiverSeed = new Uint8Array(32);
+    crypto.getRandomValues(receiverSeed);
+    const receiverRoot = fromSeed(receiverSeed);
+    const receiverPublicEd25519 = await xhd.keyGen(
+      receiverRoot,
+      KeyContext.Address,
+      0,
+      0,
+      BIP32DerivationType.Peikert,
+    );
+
+    const { ciphertext, enc } = await encryptWithXhdHpke(
+      new TextEncoder().encode("Hello HPKE!"),
+      receiverPublicEd25519,
+    );
+
+    const plaintext = await decryptWithXhdHpke({
+      ciphertext,
+      enc,
+      rootKey: receiverRoot,
+      account: 0,
+      index: 0,
+    });
+
+    expect(new TextDecoder().decode(plaintext)).toBe("Hello HPKE!");
   });
 });

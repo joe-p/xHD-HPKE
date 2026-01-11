@@ -5,8 +5,9 @@ import {
   KeyContext,
   XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
+import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
 import { Dhkem, type DhkemPrimitives, type KdfInterface } from "@hpke/common";
-import { HkdfSha256, KemId } from "@hpke/core";
+import { CipherSuite, HkdfSha256, KemId } from "@hpke/core";
 import { ed25519 } from "@noble/curves/ed25519.js";
 
 export type PublicXHDKey = CryptoKey & {
@@ -163,4 +164,61 @@ export class DhkemPeikertXhdHkdfSha256 extends Dhkem {
     const kdf = new HkdfSha256();
     super(1337 as KemId, new xHdECDH(), kdf);
   }
+}
+
+export async function encryptWithXhdHpke(
+  plaintext: Uint8Array,
+  receiverEd25519PublicKey: Uint8Array,
+): Promise<{ ciphertext: Uint8Array; enc: Uint8Array }> {
+  const suite = new CipherSuite({
+    kem: new DhkemPeikertXhdHkdfSha256(),
+    kdf: new HkdfSha256(),
+    aead: new Chacha20Poly1305(),
+  });
+
+  const sender = await suite.createSenderContext({
+    recipientPublicKey: await suite.kem.deserializePublicKey(
+      receiverEd25519PublicKey,
+    ),
+  });
+
+  return {
+    ciphertext: new Uint8Array(await sender.seal(plaintext)),
+    enc: new Uint8Array(sender.enc),
+  };
+}
+
+export async function decryptWithXhdHpke({
+  ciphertext,
+  enc,
+  rootKey,
+  account,
+  index,
+}: {
+  ciphertext: Uint8Array;
+  enc: Uint8Array;
+  rootKey: Uint8Array;
+  account: number;
+  index: number;
+}): Promise<Uint8Array> {
+  const suite = new CipherSuite({
+    kem: new DhkemPeikertXhdHkdfSha256(),
+    kdf: new HkdfSha256(),
+    aead: new Chacha20Poly1305(),
+  });
+
+  const recipient = await suite.createRecipientContext({
+    recipientKey: {
+      type: "private",
+      rootKey: rootKey,
+      account: account,
+      index: index,
+      algorithm: { name: "xHD" },
+      extractable: false,
+      usages: [],
+    } as PrivateXHDKey,
+    enc: enc.buffer,
+  });
+
+  return new Uint8Array(await recipient.open(ciphertext.buffer));
 }
