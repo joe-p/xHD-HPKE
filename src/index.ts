@@ -27,7 +27,7 @@ export type XHDKeyPair = {
 export class xHdECDH implements DhkemPrimitives {
   private _xhd: XHDWalletAPI;
 
-  constructor(hkdf: KdfInterface) {
+  constructor() {
     this._xhd = new XHDWalletAPI();
   }
 
@@ -149,8 +149,7 @@ export class xHdECDH implements DhkemPrimitives {
 }
 
 export class DhkemPeikertXhdHkdfSha256 extends Dhkem {
-  /** TODO: figure out what I should use as KemId. Does it matter? */
-  override id: KemId = 1337 as KemId;
+  override id: KemId = 0x0000;
   /** 32 */
   override secretSize: number = 32;
   /** 32 */
@@ -162,6 +161,6 @@ export class DhkemPeikertXhdHkdfSha256 extends Dhkem {
 
   constructor() {
     const kdf = new HkdfSha256();
-    super(1337 as KemId, new xHdECDH(kdf), kdf);
+    super(1337 as KemId, new xHdECDH(), kdf);
   }
 }
