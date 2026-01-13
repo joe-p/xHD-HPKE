@@ -197,7 +197,7 @@ export class DhkemXhdX25519HkdfSha256 extends Dhkem {
   }
 }
 
-export async function encryptWithXhdHpke(
+export async function encrypt(
   plaintext: Uint8Array,
   receiverCurve25519Pubkey: Uint8Array,
 ): Promise<{ ciphertext: Uint8Array; enc: Uint8Array }> {
@@ -221,7 +221,7 @@ export async function encryptWithXhdHpke(
   };
 }
 
-export async function decryptWithXhdHpke({
+export async function decrypt({
   ciphertext,
   enc,
   rootKey,

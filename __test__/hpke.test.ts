@@ -7,9 +7,9 @@ import {
 import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
 import { CipherSuite, HkdfSha512 } from "@hpke/core";
 import {
-  decryptWithXhdHpke,
+  decrypt,
   DhkemXhdX25519HkdfSha256,
-  encryptWithXhdHpke,
+  encrypt,
   getPath,
   type PrivateXHDKey,
 } from "../src";
@@ -72,12 +72,12 @@ describe("xHD HPKE", () => {
     const receiverRoot = fromSeed(buf(receiverSeed));
     const receiverPublicEd25519 = (await xhd.deriveKey(receiverRoot, getPath(0, 0).array, false, BIP32DerivationType.Peikert)).slice(0, 32);
 
-    const { ciphertext, enc } = await encryptWithXhdHpke(
+    const { ciphertext, enc } = await encrypt(
       new TextEncoder().encode("Hello HPKE!"),
       ed25519.utils.toMontgomery(receiverPublicEd25519),
     );
 
-    const plaintext = await decryptWithXhdHpke({
+    const plaintext = await decrypt({
       ciphertext,
       enc,
       rootKey: receiverRoot,
