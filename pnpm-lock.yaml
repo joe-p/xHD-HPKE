@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@algorandfoundation/xhd-wallet-api':
-        specifier: file:algorandfoundation-xhd-wallet-api-1.0.3-ecdh_raw.tgz
-        version: file:algorandfoundation-xhd-wallet-api-1.0.3-ecdh_raw.tgz
+        specifier: 2.0.0-canary.1
+        version: 2.0.0-canary.1
       '@hpke/chacha20poly1305':
         specifier: ^1.7.1
         version: 1.7.1
@@ -26,13 +26,12 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16
+        version: 4.0.16(@types/node@25.0.8)
 
 packages:
 
-  '@algorandfoundation/xhd-wallet-api@file:algorandfoundation-xhd-wallet-api-1.0.3-ecdh_raw.tgz':
-    resolution: {integrity: sha512-KFYY9bNu/h8M1HDgdAIZ0VjE24H9kus1p5Bu9ZPNzN46h1SJglV6ubCFny8qsxkzgLj3lKJ/Q/dd42i594+ZNg==, tarball: file:algorandfoundation-xhd-wallet-api-1.0.3-ecdh_raw.tgz}
-    version: 1.0.3
+  '@algorandfoundation/xhd-wallet-api@2.0.0-canary.1':
+    resolution: {integrity: sha512-U6rSWMO6FKDLvMxWtfKyW5ctqSy2NrONWTU/jOA+BX0SGru0GPXsxwzFdcPa5w+X055V/xVVsr8eA3xA+m/5jA==}
 
   '@esbuild/aix-ppc64@0.27.2':
     resolution: {integrity: sha512-GZMB+a0mOMZs4MpDbj8RJp4cw+w1WV5NYD6xzgvzUJ5Ek2jerwfO2eADyI6ExDSUED+1X8aMbegahsJi+8mgpw==}
@@ -354,6 +353,9 @@ packages:
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
+  '@types/node@25.0.8':
+    resolution: {integrity: sha512-powIePYMmC3ibL0UJ2i2s0WIbq6cg6UyVFQxSCpaPxxzAaziRfimGivjdF943sSGV6RADVbk0Nvlm5P/FB44Zg==}
+
   '@vitest/expect@4.0.16':
     resolution: {integrity: sha512-eshqULT2It7McaJkQGLkPjPjNph+uevROGuIMJdG3V+0BSR2w9u6J9Lwu+E8cK5TETlfou8GRijhafIMhXsimA==}
 
@@ -501,6 +503,9 @@ packages:
     resolution: {integrity: sha512-PSkbLUoxOFRzJYjjxHJt9xro7D+iilgMX/C9lawzVuYiIdcihh9DXmVibBe8lmcFrRi/VzlPjBxbN7rH24q8/Q==}
     engines: {node: '>=14.0.0'}
 
+  undici-types@7.16.0:
+    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
   vite@7.3.1:
     resolution: {integrity: sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -582,7 +587,7 @@ packages:
 
 snapshots:
 
-  '@algorandfoundation/xhd-wallet-api@file:algorandfoundation-xhd-wallet-api-1.0.3-ecdh_raw.tgz':
+  '@algorandfoundation/xhd-wallet-api@2.0.0-canary.1':
     dependencies:
       '@noble/ciphers': 2.1.1
       '@noble/curves': 2.0.1
@@ -775,6 +780,11 @@ snapshots:
 
   '@types/estree@1.0.8': {}
 
+  '@types/node@25.0.8':
+    dependencies:
+      undici-types: 7.16.0
+    optional: true
+
   '@vitest/expect@4.0.16':
     dependencies:
       '@standard-schema/spec': 1.1.0
@@ -784,13 +794,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.16(vite@7.3.1)':
+  '@vitest/mocker@4.0.16(vite@7.3.1(@types/node@25.0.8))':
     dependencies:
       '@vitest/spy': 4.0.16
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.1
+      vite: 7.3.1(@types/node@25.0.8)
 
   '@vitest/pretty-format@4.0.16':
     dependencies:
@@ -951,7 +961,10 @@ snapshots:
 
   tinyrainbow@3.0.3: {}
 
-  vite@7.3.1:
+  undici-types@7.16.0:
+    optional: true
+
+  vite@7.3.1(@types/node@25.0.8):
     dependencies:
       esbuild: 0.27.2
       fdir: 6.5.0(picomatch@4.0.3)
@@ -960,12 +973,13 @@ snapshots:
       rollup: 4.55.1
       tinyglobby: 0.2.15
     optionalDependencies:
+      '@types/node': 25.0.8
       fsevents: 2.3.3
 
-  vitest@4.0.16:
+  vitest@4.0.16(@types/node@25.0.8):
     dependencies:
       '@vitest/expect': 4.0.16
-      '@vitest/mocker': 4.0.16(vite@7.3.1)
+      '@vitest/mocker': 4.0.16(vite@7.3.1(@types/node@25.0.8))
       '@vitest/pretty-format': 4.0.16
       '@vitest/runner': 4.0.16
       '@vitest/snapshot': 4.0.16
@@ -982,8 +996,10 @@ snapshots:
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.3.1
+      vite: 7.3.1(@types/node@25.0.8)
       why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.0.8
     transitivePeerDependencies:
       - jiti
       - less

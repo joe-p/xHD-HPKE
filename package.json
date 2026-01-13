@@ -11,7 +11,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.22.0",
   "dependencies": {
-    "@algorandfoundation/xhd-wallet-api": "file:algorandfoundation-xhd-wallet-api-1.0.3-ecdh_raw.tgz",
+    "@algorandfoundation/xhd-wallet-api": "2.0.0-canary.1",
     "@hpke/chacha20poly1305": "^1.7.1",
     "@hpke/common": "^1.8.1",
     "@hpke/core": "^1.7.5",
