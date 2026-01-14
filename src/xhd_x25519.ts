@@ -3,7 +3,6 @@ import {
   fromSeed,
   XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
-import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
 import { Dhkem, XCryptoKey, type DhkemPrimitives, type RecipientContextParams } from "@hpke/common";
 import { CipherSuite, HkdfSha256, KemId } from "@hpke/core";
 import { ed25519, x25519 } from "@noble/curves/ed25519.js";
@@ -151,16 +150,11 @@ export class DhkemXhdX25519HkdfSha256 extends Dhkem {
 }
 
 export async function encrypt(
+  suite: CipherSuite,
   plaintext: Uint8Array,
   receiverCurve25519Pubkey: Uint8Array,
   senderAuthKeypair?: XHDKeyPair,
 ): Promise<{ ciphertext: Uint8Array; enc: Uint8Array }> {
-  const suite = new CipherSuite({
-    kem: new DhkemXhdX25519HkdfSha256(),
-    kdf: new HkdfSha256(),
-    aead: new Chacha20Poly1305(),
-  });
-
   const sender = await suite.createSenderContext({
     recipientPublicKey: await suite.kem.deserializePublicKey(
       receiverCurve25519Pubkey,
@@ -175,6 +169,7 @@ export async function encrypt(
 }
 
 export async function decrypt({
+  suite,
   ciphertext,
   enc,
   rootKey,
@@ -182,6 +177,7 @@ export async function decrypt({
   index,
   sender
 }: {
+  suite: CipherSuite;
   ciphertext: Uint8Array;
   enc: Uint8Array;
   rootKey: Uint8Array;
@@ -189,12 +185,6 @@ export async function decrypt({
   index: number;
   sender?: Uint8Array
 }): Promise<Uint8Array> {
-  const suite = new CipherSuite({
-    kem: new DhkemXhdX25519HkdfSha256(),
-    kdf: new HkdfSha256(),
-    aead: new Chacha20Poly1305(),
-  });
-
   const context: RecipientContextParams = {
     recipientKey: {
       type: "private",
