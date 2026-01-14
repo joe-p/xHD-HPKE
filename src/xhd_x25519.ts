@@ -4,7 +4,7 @@ import {
   XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
 import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
-import { Dhkem, XCryptoKey, type DhkemPrimitives } from "@hpke/common";
+import { Dhkem, XCryptoKey, type DhkemPrimitives, type RecipientContextParams } from "@hpke/common";
 import { CipherSuite, HkdfSha256, KemId } from "@hpke/core";
 import { ed25519, x25519 } from "@noble/curves/ed25519.js";
 import { getPath, type BIP32Path, type PrivateXHDKey, type XHDKeyPair } from ".";
@@ -153,6 +153,7 @@ export class DhkemXhdX25519HkdfSha256 extends Dhkem {
 export async function encrypt(
   plaintext: Uint8Array,
   receiverCurve25519Pubkey: Uint8Array,
+  senderAuthKeypair?: XHDKeyPair,
 ): Promise<{ ciphertext: Uint8Array; enc: Uint8Array }> {
   const suite = new CipherSuite({
     kem: new DhkemXhdX25519HkdfSha256(),
@@ -164,6 +165,7 @@ export async function encrypt(
     recipientPublicKey: await suite.kem.deserializePublicKey(
       receiverCurve25519Pubkey,
     ),
+    senderKey: senderAuthKeypair,
   });
 
   return {
@@ -178,12 +180,14 @@ export async function decrypt({
   rootKey,
   account,
   index,
+  sender
 }: {
   ciphertext: Uint8Array;
   enc: Uint8Array;
   rootKey: Uint8Array;
   account: number;
   index: number;
+  sender?: Uint8Array
 }): Promise<Uint8Array> {
   const suite = new CipherSuite({
     kem: new DhkemXhdX25519HkdfSha256(),
@@ -191,7 +195,7 @@ export async function decrypt({
     aead: new Chacha20Poly1305(),
   });
 
-  const recipient = await suite.createRecipientContext({
+  const context: RecipientContextParams = {
     recipientKey: {
       type: "private",
       ...getPath(account, index),
@@ -202,7 +206,13 @@ export async function decrypt({
       usages: [],
     } as PrivateXHDKey,
     enc: buf(enc),
-  });
+  }
+
+  if (sender) {
+    context.senderPublicKey = await suite.kem.deserializePublicKey(buf(sender));
+  }
+
+  const recipient = await suite.createRecipientContext(context);
 
   return new Uint8Array(await recipient.open(buf(ciphertext)));
 }

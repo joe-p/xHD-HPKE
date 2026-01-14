@@ -58,14 +58,43 @@ describe("xHD HPKE", () => {
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
     const receiverRoot = fromSeed(buf(receiverSeed));
-    const receiverPublicEd25519 = (await xhd.deriveKey(receiverRoot, getPath(0, 0).array, false, BIP32DerivationType.Peikert)).slice(0, 32);
+    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
 
     const { ciphertext, enc } = await encrypt(
       new TextEncoder().encode("Hello HPKE!"),
-      ed25519.utils.toMontgomery(receiverPublicEd25519),
+      receiverKeypair.publicKey.key
     );
 
     const plaintext = await decrypt({
+      ciphertext,
+      enc,
+      rootKey: receiverRoot,
+      account: 0,
+      index: 0,
+    });
+
+    expect(new TextDecoder().decode(plaintext)).toBe("Hello HPKE!");
+  });
+
+  it("encrypt/decrypt functions with auth", async () => {
+    const senderSeed = new Uint8Array(32);
+    crypto.getRandomValues(senderSeed);
+    const senderRoot = fromSeed(buf(senderSeed));
+    const senderKeypair = await deriveX25519Keypair(senderRoot, 0, 0);
+
+    const receiverSeed = new Uint8Array(32);
+    crypto.getRandomValues(receiverSeed);
+    const receiverRoot = fromSeed(buf(receiverSeed));
+    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
+
+    const { ciphertext, enc } = await encrypt(
+      new TextEncoder().encode("Hello HPKE!"),
+      receiverKeypair.publicKey.key,
+      senderKeypair
+    );
+
+    const plaintext = await decrypt({
+      sender: senderKeypair.publicKey.key,
       ciphertext,
       enc,
       rootKey: receiverRoot,
