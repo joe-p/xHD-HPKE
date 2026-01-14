@@ -10,11 +10,10 @@ import {
   decrypt,
   DhkemXhdX25519HkdfSha256,
   encrypt,
-  getPath,
-  type PrivateXHDKey,
-} from "../src";
+} from "../src/xhd_x25519";
 import { describe, expect, it } from "vitest";
 import { ed25519 } from "@noble/curves/ed25519.js";
+import { getPath, type PrivateXHDKey } from "../src";
 
 function buf(arr: Uint8Array): Buffer {
   return Buffer.from(arr.buffer, arr.byteOffset, arr.byteLength);
@@ -51,7 +50,7 @@ describe("xHD HPKE", () => {
         rootKey: receiverRoot,
         type: "private",
         derivation: BIP32DerivationType.Peikert,
-        algorithm: { name: "xHD" },
+        algorithm: { name: "X25519" },
         extractable: false,
         usages: [],
         ...getPath(0, 0),
