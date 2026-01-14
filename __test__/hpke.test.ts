@@ -1,19 +1,19 @@
 import {
   BIP32DerivationType,
   fromSeed,
-  KeyContext,
   XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
 import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
 import { CipherSuite, HkdfSha512 } from "@hpke/core";
 import {
   decrypt,
+  deriveX25519Keypair,
   DhkemXhdX25519HkdfSha256,
   encrypt,
 } from "../src/xhd_x25519";
 import { describe, expect, it } from "vitest";
 import { ed25519 } from "@noble/curves/ed25519.js";
-import { getPath, type PrivateXHDKey } from "../src";
+import { getPath } from "../src";
 
 function buf(arr: Uint8Array): Buffer {
   return Buffer.from(arr.buffer, arr.byteOffset, arr.byteLength);
@@ -21,8 +21,6 @@ function buf(arr: Uint8Array): Buffer {
 
 describe("xHD HPKE", () => {
   it("should encrypt and decrypt a message using HPKE with xHD keys", async () => {
-    const xhd = new XHDWalletAPI();
-
     const suite = new CipherSuite({
       kem: new DhkemXhdX25519HkdfSha256(),
       kdf: new HkdfSha512(),
@@ -32,12 +30,11 @@ describe("xHD HPKE", () => {
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
     const receiverRoot = fromSeed(buf(receiverSeed));
-    const receiverEd25519 = (await xhd.deriveKey(receiverRoot, getPath(0, 0).array, false, BIP32DerivationType.Peikert)).slice(0, 32);
-    const receiverX25519 = ed25519.utils.toMontgomery(receiverEd25519);
+    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
 
     // A sender encrypts a message with the recipient public key.
     const sender = await suite.createSenderContext({
-      recipientPublicKey: await suite.kem.deserializePublicKey(receiverX25519),
+      recipientPublicKey: receiverKeypair.publicKey,
     });
 
     const ct = await sender.seal(
@@ -46,15 +43,7 @@ describe("xHD HPKE", () => {
 
     // The recipient decrypts it.
     const recipient = await suite.createRecipientContext({
-      recipientKey: {
-        rootKey: receiverRoot,
-        type: "private",
-        derivation: BIP32DerivationType.Peikert,
-        algorithm: { name: "X25519" },
-        extractable: false,
-        usages: [],
-        ...getPath(0, 0),
-      } as PrivateXHDKey,
+      recipientKey: receiverKeypair.privateKey,
       enc: sender.enc,
     });
     const pt = await recipient.open(ct);
