@@ -38,3 +38,36 @@ const plaintext = await decrypt({
 
 console.log(new TextDecoder().decode(plaintext)); // Hello HPKE!
 ```
+
+### Auth Mode
+
+This implementation also supports auth mode. To encrypt with auth mode, provide the sender's keypair to the `encrypt` function. On the decryption side, provide the sender's public key to the `decrypt` function.
+
+```ts
+const senderSeed = new Uint8Array(32);
+crypto.getRandomValues(senderSeed);
+const senderRoot = fromSeed(buf(senderSeed));
+const senderKeypair = await deriveX25519Keypair(senderRoot, 0, 0);
+
+const receiverSeed = new Uint8Array(32);
+crypto.getRandomValues(receiverSeed);
+const receiverRoot = fromSeed(buf(receiverSeed));
+const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
+
+const { ciphertext, enc } = await encrypt(
+  new TextEncoder().encode("Hello HPKE!"),
+  receiverKeypair.publicKey.key,
+  senderKeypair
+);
+
+const plaintext = await decrypt({
+  sender: senderKeypair.publicKey.key,
+  ciphertext,
+  enc,
+  rootKey: receiverRoot,
+  account: 0,
+  index: 0,
+});
+
+expect(new TextDecoder().decode(plaintext)).toBe("Hello HPKE!");
+```
