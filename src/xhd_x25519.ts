@@ -24,15 +24,10 @@ export class xHdX25519 implements DhkemPrimitives {
   }
 
   async serializePublicKey(key: XCryptoKey): Promise<ArrayBuffer> {
-    console.debug({ key })
-    const pk = key.key.buffer.slice(
+    return key.key.buffer.slice(
       key.key.byteOffset,
       key.key.byteOffset + key.key.byteLength,
     );
-
-    console.debug("Serialized Public Key:", Buffer.from(pk).toString("hex"));
-
-    return pk;
   }
 
   async deserializePublicKey(key: ArrayBuffer): Promise<XCryptoKey> {
