@@ -10,17 +10,45 @@ import { ed25519, x25519 } from "@noble/curves/ed25519.js";
 import { getPath, type BIP32Path, type PrivateXHDKey, type XHDKeyPair } from ".";
 import { buf } from "./utils";
 
+const xhd = new XHDWalletAPI();
 
+async function getPublicX25519Key(sk: PrivateXHDKey): Promise<XCryptoKey> {
+  const ed25519Pub = (await xhd.deriveKey(
+    sk.rootKey,
+    [sk.purpose, sk.coinType, sk.account, sk.change, sk.index],
+    false,
+    sk.derivation,
+  )).slice(0, 32);
+
+  const pubX25519 = ed25519.utils.toMontgomery(ed25519Pub);
+
+  return new XCryptoKey("X25519", pubX25519, "public");
+}
+
+export async function deriveX25519Keypair(rootKey: Uint8Array, account: number, index: number, derivationType: BIP32DerivationType = BIP32DerivationType.Peikert): Promise<XHDKeyPair> {
+  const privateKey: PrivateXHDKey = {
+    ...getPath(account, index),
+    derivation: derivationType,
+    type: "private",
+    rootKey: rootKey,
+    algorithm: { name: "xHD" },
+    extractable: false,
+    usages: [],
+  };
+
+  return {
+    publicKey: await getPublicX25519Key(privateKey),
+    privateKey,
+  };
+}
 
 export class xHdX25519 implements DhkemPrimitives {
-  private _xhd: XHDWalletAPI;
   private _derivationType: BIP32DerivationType;
   private _generatedPath: BIP32Path;
 
-  constructor(options: { derivationType?: BIP32DerivationType, generatedPath?: BIP32Path } = {}) {
-    this._xhd = new XHDWalletAPI();
+  constructor(options: { derivationType?: BIP32DerivationType, account?: number, index?: number } = {}) {
     this._derivationType = options.derivationType ?? BIP32DerivationType.Peikert;
-    this._generatedPath = options.generatedPath ?? getPath(0, 0);
+    this._generatedPath = getPath(options.account ?? 0, options.index ?? 0);
   }
 
   async serializePublicKey(key: XCryptoKey): Promise<ArrayBuffer> {
@@ -41,7 +69,7 @@ export class xHdX25519 implements DhkemPrimitives {
   }
 
   async serializePrivateKey(key: PrivateXHDKey): Promise<ArrayBuffer> {
-    const sk = await this._xhd.deriveKey(
+    const sk = await xhd.deriveKey(
       key.rootKey,
       [key.purpose, key.coinType, key.account, key.change, key.index],
       true,
@@ -73,31 +101,14 @@ export class xHdX25519 implements DhkemPrimitives {
       derivation: this._derivationType,
       type: "private",
       rootKey: rootKey,
-      algorithm: { name: "xHD" },
+      algorithm: { name: "X25519" },
       extractable: false,
-      usages: ["deriveBits"],
+      usages: [],
     };
 
-    const pubkeyEd25519 = (await this._xhd.deriveKey(
-      rootKey,
-      [
-        this._generatedPath.purpose,
-        this._generatedPath.coinType,
-        this._generatedPath.account,
-        this._generatedPath.change,
-        this._generatedPath.index,
-      ],
-      false,
-      this._derivationType,
-    )).slice(0, 32);
-
-    const pubkeyX25519 = ed25519.utils.toMontgomery(pubkeyEd25519);
-
-    const publicKey = new XCryptoKey("X25519", pubkeyX25519, "public")
-
     return {
-      publicKey: publicKey,
-      privateKey: privateKey,
+      publicKey: await getPublicX25519Key(privateKey),
+      privateKey,
     };
   }
 
@@ -111,26 +122,11 @@ export class xHdX25519 implements DhkemPrimitives {
    * @returns The derived public key.
    */
   async derivePublicKey(key: PrivateXHDKey): Promise<XCryptoKey> {
-    const ed25519Pub = (await this._xhd.deriveKey(
-      key.rootKey,
-      [key.purpose, key.coinType, key.account, key.change, key.index],
-      false,
-      this._derivationType,
-    )).slice(0, 32);
-
-    const pubX25519 = ed25519.utils.toMontgomery(ed25519Pub);
-
-    return {
-      type: "public",
-      key: pubX25519,
-      algorithm: { name: "X25519" },
-      extractable: true,
-      usages: [],
-    };
+    return getPublicX25519Key(key);
   }
 
   async dh(sk: PrivateXHDKey, pk: XCryptoKey): Promise<ArrayBuffer> {
-    const childSecret = await this._xhd.deriveKey(sk.rootKey, [sk.purpose, sk.coinType, sk.account, sk.change, sk.index], true, this._derivationType);
+    const childSecret = await xhd.deriveKey(sk.rootKey, [sk.purpose, sk.coinType, sk.account, sk.change, sk.index], true, this._derivationType);
     const scalar = childSecret.slice(0, 32);
 
     return x25519.getSharedSecret(scalar, pk.key);
@@ -163,8 +159,6 @@ export async function encrypt(
     kdf: new HkdfSha256(),
     aead: new Chacha20Poly1305(),
   });
-
-  console.debug("Receiver Curve25519 Pubkey:", Buffer.from(receiverCurve25519Pubkey).toString("hex"));
 
   const sender = await suite.createSenderContext({
     recipientPublicKey: await suite.kem.deserializePublicKey(
