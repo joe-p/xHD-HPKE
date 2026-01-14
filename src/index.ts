@@ -1,14 +1,8 @@
 import {
   BIP32DerivationType,
-  fromSeed,
   harden,
-  KeyContext,
-  XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
-import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
-import { Dhkem, XCryptoKey, type DhkemPrimitives } from "@hpke/common";
-import { CipherSuite, HkdfSha256, KemId } from "@hpke/core";
-import { ed25519, x25519 } from "@noble/curves/ed25519.js";
+import { XCryptoKey } from "@hpke/common";
 
 export type BIP32Path = {
   purpose: number,
