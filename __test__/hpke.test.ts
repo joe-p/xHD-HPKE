@@ -62,8 +62,6 @@ describe("xHD HPKE", () => {
   });
 
   it("encrypt/decrypt functions", async () => {
-    const xhd = new XHDWalletAPI();
-
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
     const receiverRoot = fromSeed(buf(receiverSeed));
