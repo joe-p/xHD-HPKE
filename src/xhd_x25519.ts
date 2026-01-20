@@ -71,7 +71,7 @@ export class xHdX25519 implements DhkemPrimitives {
   }
 
   async deserializePrivateKey(key: ArrayBuffer): Promise<CryptoKey> {
-    throw new Error("deserializePrivateKey not implemented.");
+    return new PrivateXHDKey(new Uint8Array(key));
   }
 
   async importKey(
