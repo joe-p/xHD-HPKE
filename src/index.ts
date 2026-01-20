@@ -1,5 +1,4 @@
 import {
-  BIP32DerivationType,
   harden,
 } from "@algorandfoundation/xhd-wallet-api";
 import { XCryptoKey } from "@hpke/common";
@@ -29,11 +28,12 @@ export function getPath(account: number, index: number): BIP32Path & { array: [n
 
   return { ...path, array: [path.purpose, path.coinType, path.account, path.change, path.index] };
 }
-export type PrivateXHDKey = CryptoKey & {
-  type: "private";
-  rootKey: Uint8Array;
-  derivation: BIP32DerivationType;
-} & BIP32Path;
+
+export class PrivateXHDKey extends XCryptoKey {
+  constructor(public extendedSecretKey: Uint8Array) {
+    super("X25519", extendedSecretKey, "private");
+  }
+}
 
 export type XHDKeyPair = {
   publicKey: XCryptoKey;

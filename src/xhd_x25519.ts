@@ -6,34 +6,33 @@ import {
 import { Dhkem, XCryptoKey, type DhkemPrimitives, type RecipientContextParams } from "@hpke/common";
 import { CipherSuite, HkdfSha256, KemId } from "@hpke/core";
 import { ed25519, x25519 } from "@noble/curves/ed25519.js";
-import { getPath, type BIP32Path, type PrivateXHDKey, type XHDKeyPair } from ".";
+import { getPath, PrivateXHDKey, type BIP32Path, type XHDKeyPair } from ".";
 import { buf } from "./utils";
+import { bytesToNumberLE } from "@noble/curves/utils.js";
+import { mod } from "@noble/curves/abstract/modular.js";
 
 const xhd = new XHDWalletAPI();
 
 async function getPublicX25519Key(sk: PrivateXHDKey): Promise<XCryptoKey> {
-  const ed25519Pub = (await xhd.deriveKey(
-    sk.rootKey,
-    [sk.purpose, sk.coinType, sk.account, sk.change, sk.index],
-    false,
-    sk.derivation,
-  )).slice(0, 32);
+  const scalar = bytesToNumberLE(sk.key.slice(0, 32));
+  const clearedTopBitScalar = scalar & ((1n << 255n) - 1n);
+  const reducedScalar = mod(clearedTopBitScalar, ed25519.Point.Fn.ORDER);
 
-  const pubX25519 = ed25519.utils.toMontgomery(ed25519Pub);
+  const ed25519Pub = ed25519.Point.BASE.multiply(reducedScalar);
+  const pubX25519 = ed25519.utils.toMontgomery(ed25519Pub.toBytes());
 
   return new XCryptoKey("X25519", pubX25519, "public");
 }
 
 export async function deriveX25519Keypair(rootKey: Uint8Array, account: number, index: number, derivationType: BIP32DerivationType = BIP32DerivationType.Peikert): Promise<XHDKeyPair> {
-  const privateKey: PrivateXHDKey = {
-    ...getPath(account, index),
-    derivation: derivationType,
-    type: "private",
-    rootKey: rootKey,
-    algorithm: { name: "xHD" },
-    extractable: false,
-    usages: [],
-  };
+  const privateKeyBytes = await xhd.deriveKey(
+    rootKey,
+    getPath(account, index).array,
+    true,
+    derivationType,
+  );
+
+  const privateKey = new PrivateXHDKey(privateKeyBytes)
 
   return {
     publicKey: await getPublicX25519Key(privateKey),
@@ -68,14 +67,7 @@ export class xHdX25519 implements DhkemPrimitives {
   }
 
   async serializePrivateKey(key: PrivateXHDKey): Promise<ArrayBuffer> {
-    const sk = await xhd.deriveKey(
-      key.rootKey,
-      [key.purpose, key.coinType, key.account, key.change, key.index],
-      true,
-      this._derivationType,
-    );
-
-    return sk.buffer;
+    return key.key;
   }
 
   async deserializePrivateKey(key: ArrayBuffer): Promise<CryptoKey> {
@@ -95,15 +87,20 @@ export class xHdX25519 implements DhkemPrimitives {
     crypto.getRandomValues(seed);
     const rootKey = fromSeed(buf(seed));
 
-    const privateKey: PrivateXHDKey = {
-      ...this._generatedPath,
-      derivation: this._derivationType,
-      type: "private",
-      rootKey: rootKey,
-      algorithm: { name: "X25519" },
-      extractable: false,
-      usages: [],
-    };
+    const privateKeyBytes = await xhd.deriveKey(
+      rootKey,
+      [
+        this._generatedPath.purpose,
+        this._generatedPath.coinType,
+        this._generatedPath.account,
+        this._generatedPath.change,
+        this._generatedPath.index,
+      ],
+      true,
+      this._derivationType,
+    );
+
+    const privateKey = new PrivateXHDKey(privateKeyBytes)
 
     return {
       publicKey: await getPublicX25519Key(privateKey),
@@ -125,9 +122,7 @@ export class xHdX25519 implements DhkemPrimitives {
   }
 
   async dh(sk: PrivateXHDKey, pk: XCryptoKey): Promise<ArrayBuffer> {
-    const childSecret = await xhd.deriveKey(sk.rootKey, [sk.purpose, sk.coinType, sk.account, sk.change, sk.index], true, this._derivationType);
-    const scalar = childSecret.slice(0, 32);
-
+    const scalar = sk.key.slice(0, 32);
     return x25519.getSharedSecret(scalar, pk.key);
   }
 }
@@ -185,16 +180,16 @@ export async function decrypt({
   index: number;
   sender?: Uint8Array
 }): Promise<Uint8Array> {
+  const path = getPath(account, index);
+  const privateKeyBytes = await xhd.deriveKey(
+    rootKey,
+    path.array,
+    true,
+    BIP32DerivationType.Peikert,
+  );
+
   const context: RecipientContextParams = {
-    recipientKey: {
-      type: "private",
-      ...getPath(account, index),
-      derivation: BIP32DerivationType.Peikert,
-      rootKey: rootKey,
-      algorithm: { name: "xHD" },
-      extractable: false,
-      usages: [],
-    } as PrivateXHDKey,
+    recipientKey: new PrivateXHDKey(privateKeyBytes),
     enc: buf(enc),
   }
 
