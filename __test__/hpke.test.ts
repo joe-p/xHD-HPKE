@@ -1,13 +1,11 @@
 import {
   fromSeed,
-  XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
 import { Chacha20Poly1305 } from "@hpke/chacha20poly1305";
-import { CipherSuite, DhkemX25519HkdfSha256, HkdfSha256, HkdfSha512 } from "@hpke/core";
+import { CipherSuite, DhkemX25519HkdfSha256, HkdfSha256 } from "@hpke/core";
 import {
   decrypt,
   deriveX25519Keypair,
-  DhkemXhdX25519HkdfSha256,
   encrypt,
 } from "../src/xhd_x25519";
 import { describe, expect, it } from "vitest";
@@ -16,51 +14,13 @@ function buf(arr: Uint8Array): Buffer {
   return Buffer.from(arr.buffer, arr.byteOffset, arr.byteLength);
 }
 
-const xHDSuite = new CipherSuite({
-  kem: new DhkemXhdX25519HkdfSha256(),
-  kdf: new HkdfSha256(),
-  aead: new Chacha20Poly1305(),
-});
-
-const nonXhdSuite = new CipherSuite({
+const suite = new CipherSuite({
   kem: new DhkemX25519HkdfSha256(),
   kdf: new HkdfSha256(),
   aead: new Chacha20Poly1305(),
 });
 
 describe("xHD HPKE", () => {
-  it("should encrypt and decrypt a message using HPKE with xHD keys", async () => {
-    const suite = new CipherSuite({
-      kem: new DhkemXhdX25519HkdfSha256(),
-      kdf: new HkdfSha512(),
-      aead: new Chacha20Poly1305(),
-    });
-
-    const receiverSeed = new Uint8Array(32);
-    crypto.getRandomValues(receiverSeed);
-    const receiverRoot = fromSeed(buf(receiverSeed));
-    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
-
-    // A sender encrypts a message with the recipient public key.
-    const sender = await suite.createSenderContext({
-      recipientPublicKey: receiverKeypair.publicKey,
-    });
-
-    const ct = await sender.seal(
-      new TextEncoder().encode("Hello world!").buffer,
-    );
-
-    // The recipient decrypts it.
-    const recipient = await suite.createRecipientContext({
-      recipientKey: receiverKeypair.privateKey,
-      enc: sender.enc,
-    });
-    const pt = await recipient.open(ct);
-
-    // Hello world!
-    expect(new TextDecoder().decode(pt)).toBe("Hello world!");
-  });
-
   it("encrypt/decrypt functions", async () => {
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
@@ -68,13 +28,13 @@ describe("xHD HPKE", () => {
     const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
 
     const { ciphertext, enc } = await encrypt(
-      xHDSuite,
+      suite,
       new TextEncoder().encode("Hello HPKE!"),
-      receiverKeypair.publicKey.key
+      receiverKeypair.publicKey
     );
 
     const plaintext = await decrypt({
-      suite: xHDSuite,
+      suite,
       ciphertext,
       enc,
       rootKey: receiverRoot,
@@ -97,15 +57,15 @@ describe("xHD HPKE", () => {
     const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
 
     const { ciphertext, enc } = await encrypt(
-      xHDSuite,
+      suite,
       new TextEncoder().encode("Hello HPKE!"),
-      receiverKeypair.publicKey.key,
+      receiverKeypair.publicKey,
       senderKeypair
     );
 
     const plaintext = await decrypt({
-      suite: xHDSuite,
-      sender: senderKeypair.publicKey.key,
+      suite,
+      sender: senderKeypair.publicKey,
       ciphertext,
       enc,
       rootKey: receiverRoot,
@@ -117,18 +77,17 @@ describe("xHD HPKE", () => {
   });
 
   it("non-xhd encrypt with xhd decrypt with auth", async () => {
-    const senderKeypair = await nonXhdSuite.kem.generateKeyPair();
+    const senderKeypair = await suite.kem.generateKeyPair();
 
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
     const receiverRoot = fromSeed(buf(receiverSeed));
     const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
-    const senderPub = await nonXhdSuite.kem.serializePublicKey(senderKeypair.publicKey)
+    const senderPub = senderKeypair.publicKey
 
-    const sender = await nonXhdSuite.createSenderContext({
-      recipientPublicKey: await nonXhdSuite.kem.deserializePublicKey(
-        receiverKeypair.publicKey.key,
-      ),
+    const sender = await suite.createSenderContext({
+      recipientPublicKey: receiverKeypair.publicKey,
+
       senderKey: senderKeypair,
     })
 
@@ -137,8 +96,8 @@ describe("xHD HPKE", () => {
     );
 
     const plaintext = await decrypt({
-      suite: xHDSuite,
-      sender: new Uint8Array(senderPub),
+      suite,
+      sender: senderPub,
       ciphertext: new Uint8Array(ciphertext),
       enc: new Uint8Array(sender.enc),
       rootKey: receiverRoot,
@@ -155,22 +114,20 @@ describe("xHD HPKE", () => {
     const senderRoot = fromSeed(buf(senderSeed));
     const senderKeypair = await deriveX25519Keypair(senderRoot, 0, 0);
 
-    const receiverKeypair = await nonXhdSuite.kem.generateKeyPair();
-    const receiverPub = await nonXhdSuite.kem.serializePublicKey(receiverKeypair.publicKey);
+    const receiverKeypair = await suite.kem.generateKeyPair();
+    const receiverPub = receiverKeypair.publicKey;
 
     const { ciphertext, enc } = await encrypt(
-      xHDSuite,
+      suite,
       new TextEncoder().encode("Hello HPKE!"),
-      new Uint8Array(receiverPub),
+      receiverPub,
       senderKeypair
     );
 
-    const recipient = await nonXhdSuite.createRecipientContext({
+    const recipient = await suite.createRecipientContext({
       recipientKey: receiverKeypair.privateKey,
       enc,
-      senderPublicKey: await nonXhdSuite.kem.deserializePublicKey(
-        senderKeypair.publicKey.key
-      ),
+      senderPublicKey: senderKeypair.publicKey,
     });
 
     const plaintext = await recipient.open(ciphertext);

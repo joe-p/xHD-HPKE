@@ -29,15 +29,5 @@ export function getPath(account: number, index: number): BIP32Path & { array: [n
   return { ...path, array: [path.purpose, path.coinType, path.account, path.change, path.index] };
 }
 
-export class PrivateXHDKey extends XCryptoKey {
-  constructor(public extendedSecretKey: Uint8Array) {
-    super("X25519", extendedSecretKey, "private");
-  }
-}
-
-export type XHDKeyPair = {
-  publicKey: XCryptoKey;
-  privateKey: PrivateXHDKey;
-};
 
 
