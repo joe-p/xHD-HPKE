@@ -64,27 +64,17 @@ export async function decrypt({
   suite,
   ciphertext,
   enc,
-  rootKey,
-  account,
-  index,
+  recipientPrivateKey,
   sender
 }: {
   suite: CipherSuite;
   ciphertext: Uint8Array;
   enc: Uint8Array;
-  rootKey: Uint8Array;
-  account: number;
-  index: number;
+  recipientPrivateKey: CryptoKey;
   sender?: CryptoKey
 }): Promise<Uint8Array> {
-  const keyPair = await deriveX25519Keypair(
-    rootKey,
-    account,
-    index,
-  )
-
   const context: RecipientContextParams = {
-    recipientKey: keyPair.privateKey,
+    recipientKey: recipientPrivateKey,
     enc: buf(enc),
     senderPublicKey: sender
   }

@@ -37,9 +37,7 @@ describe("xHD HPKE", () => {
       suite,
       ciphertext,
       enc,
-      rootKey: receiverRoot,
-      account: 0,
-      index: 0,
+      recipientPrivateKey: receiverKeypair.privateKey,
     });
 
     expect(new TextDecoder().decode(plaintext)).toBe("Hello HPKE!");
@@ -68,9 +66,7 @@ describe("xHD HPKE", () => {
       sender: senderKeypair.publicKey,
       ciphertext,
       enc,
-      rootKey: receiverRoot,
-      account: 0,
-      index: 0,
+      recipientPrivateKey: receiverKeypair.privateKey,
     });
 
     expect(new TextDecoder().decode(plaintext)).toBe("Hello HPKE!");
@@ -100,9 +96,7 @@ describe("xHD HPKE", () => {
       sender: senderPub,
       ciphertext: new Uint8Array(ciphertext),
       enc: new Uint8Array(sender.enc),
-      rootKey: receiverRoot,
-      account: 0,
-      index: 0,
+      recipientPrivateKey: receiverKeypair.privateKey,
     });
 
     expect(new TextDecoder().decode(plaintext)).toBe("Hello HPKE!");
