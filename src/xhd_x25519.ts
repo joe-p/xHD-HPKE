@@ -1,5 +1,6 @@
 import {
   BIP32DerivationType,
+  harden,
   XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
 import { type RecipientContextParams } from "@hpke/common";
@@ -26,7 +27,11 @@ export async function deriveX25519Keypair(
 ): Promise<CryptoKeyPair> {
   const xHdPrivateKeyBytes = await xhd.deriveKey(
     rootKey,
-    getPath(account, index).array,
+    [
+      harden(20_000), // we're using 20_000 as purpose since satoshi labs reserves up to 19_999
+      harden(account), // hardened derivation for the account
+      index, // Non-hardened derivation for the index
+    ],
     true,
     derivationType,
   );
