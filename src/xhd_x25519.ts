@@ -6,7 +6,6 @@ import {
 import { type RecipientContextParams } from "@hpke/common";
 import { CipherSuite, DhkemX25519HkdfSha256 } from "@hpke/core";
 import { x25519 } from "@noble/curves/ed25519.js";
-import { getPath } from ".";
 import { buf } from "./utils";
 
 const xhd = new XHDWalletAPI();
@@ -19,10 +18,17 @@ function getKem(): DhkemX25519HkdfSha256 {
   return kem;
 }
 
+/**
+ * Derives an X25519 keypair from the given root key and account index. It should be noted that no soft-derivatins
+ * are done to ensure the scalar is clamped for X25519 usage.
+ * @param rootKey - The root key (master private key) as a Uint8Array.
+ * @param account - The account index for derivation.
+ * @param derivationType - The BIP32 derivation type (default is Peikert).
+ * @returns A Promise that resolves to a CryptoKeyPair containing the derived X25519 public and private keys.
+ */
 export async function deriveX25519Keypair(
   rootKey: Uint8Array,
   account: number,
-  index: number,
   derivationType: BIP32DerivationType = BIP32DerivationType.Peikert
 ): Promise<CryptoKeyPair> {
   const xHdPrivateKeyBytes = await xhd.deriveKey(
@@ -30,7 +36,6 @@ export async function deriveX25519Keypair(
     [
       harden(20_000), // we're using 20_000 as purpose since satoshi labs reserves up to 19_999
       harden(account), // hardened derivation for the account
-      index, // Non-hardened derivation for the index
     ],
     true,
     derivationType,

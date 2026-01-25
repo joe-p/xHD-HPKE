@@ -25,7 +25,7 @@ describe("xHD HPKE", () => {
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
     const receiverRoot = fromSeed(buf(receiverSeed));
-    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
+    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0);
 
     const { ciphertext, enc } = await encrypt(
       suite,
@@ -47,12 +47,12 @@ describe("xHD HPKE", () => {
     const senderSeed = new Uint8Array(32);
     crypto.getRandomValues(senderSeed);
     const senderRoot = fromSeed(buf(senderSeed));
-    const senderKeypair = await deriveX25519Keypair(senderRoot, 0, 0);
+    const senderKeypair = await deriveX25519Keypair(senderRoot, 0);
 
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
     const receiverRoot = fromSeed(buf(receiverSeed));
-    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
+    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0);
 
     const { ciphertext, enc } = await encrypt(
       suite,
@@ -78,7 +78,7 @@ describe("xHD HPKE", () => {
     const receiverSeed = new Uint8Array(32);
     crypto.getRandomValues(receiverSeed);
     const receiverRoot = fromSeed(buf(receiverSeed));
-    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0, 0);
+    const receiverKeypair = await deriveX25519Keypair(receiverRoot, 0);
     const senderPub = senderKeypair.publicKey
 
     const sender = await suite.createSenderContext({
@@ -106,7 +106,7 @@ describe("xHD HPKE", () => {
     const senderSeed = new Uint8Array(32);
     crypto.getRandomValues(senderSeed);
     const senderRoot = fromSeed(buf(senderSeed));
-    const senderKeypair = await deriveX25519Keypair(senderRoot, 0, 0);
+    const senderKeypair = await deriveX25519Keypair(senderRoot, 0);
 
     const receiverKeypair = await suite.kem.generateKeyPair();
     const receiverPub = receiverKeypair.publicKey;
